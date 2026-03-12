@@ -8,18 +8,52 @@ const adminController = require("../controllers/admin.controller");
 const upload = require("../middlewares/upload");
 
 /* ===============================
-   Dashboard
+   DASHBOARD
 ================================= */
+
 router.get(
-  "/dashboard",
+  "/stats",
   auth,
   role("admin", "super_admin"),
   adminController.getDashboardStats
 );
 
 /* ===============================
-   Driver Applications
+   ORDERS
 ================================= */
+
+router.get(
+  "/orders",
+  auth,
+  role("admin", "super_admin"),
+  adminController.getAllOrders
+);
+
+router.patch(
+  "/orders/:id/cancel",
+  auth,
+  role("admin", "super_admin"),
+  adminController.cancelOrder
+);
+
+router.get(
+  "/drivers-list",
+  auth,
+  role("admin", "super_admin"),
+  adminController.getAvailableDrivers
+);
+
+router.patch(
+  "/orders/:id/assign-driver",
+  auth,
+  role("admin", "super_admin"),
+  adminController.assignDriver
+);
+
+/* ===============================
+   DRIVER APPLICATIONS
+================================= */
+
 router.get(
   "/driver-applications",
   auth,
@@ -35,8 +69,9 @@ router.patch(
 );
 
 /* ===============================
-   Drivers
+   DRIVERS
 ================================= */
+
 router.get(
   "/drivers",
   auth,
@@ -45,8 +80,9 @@ router.get(
 );
 
 /* ===============================
-   Merchant Applications
+   MERCHANT APPLICATIONS
 ================================= */
+
 router.get(
   "/merchant-applications",
   auth,
@@ -62,7 +98,7 @@ router.patch(
 );
 
 /* ===============================
-   Merchants CRUD
+   MERCHANTS
 ================================= */
 
 router.get(
@@ -77,13 +113,6 @@ router.post(
   auth,
   role("admin", "super_admin"),
   adminController.createMerchant
-);
-
-router.put(
-  "/merchants/:id",
-  auth,
-  role("admin", "super_admin"),
-  adminController.updateMerchant
 );
 
 router.delete(
@@ -101,7 +130,7 @@ router.patch(
 );
 
 /* ===============================
-   Products CRUD
+   PRODUCTS
 ================================= */
 
 router.post(
@@ -119,13 +148,6 @@ router.get(
   adminController.getProducts
 );
 
-router.put(
-  "/products/:id",
-  auth,
-  role("admin", "super_admin"),
-  adminController.updateProduct
-);
-
 router.delete(
   "/products/:id",
   auth,
@@ -141,7 +163,7 @@ router.patch(
 );
 
 /* ===============================
-   Withdraw
+   WITHDRAW
 ================================= */
 
 router.get(

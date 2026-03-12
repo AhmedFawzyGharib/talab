@@ -1,20 +1,12 @@
 const mongoose = require("mongoose");
 
-const OrderSchema = new mongoose.Schema(
-{
-  /* ===============================
-     TYPE
-  =============================== */
+const OrderSchema = new mongoose.Schema({
 
   type: {
     type: String,
     enum: ["merchant", "custom"],
     default: "merchant"
   },
-
-  /* ===============================
-     RELATIONS
-  =============================== */
 
   customer: {
     type: mongoose.Schema.Types.ObjectId,
@@ -34,10 +26,6 @@ const OrderSchema = new mongoose.Schema(
     default: null
   },
 
-  /* ===============================
-     CUSTOM DELIVERY PICKUPS
-  =============================== */
-
   pickups: [
     {
       name: String,
@@ -49,17 +37,10 @@ const OrderSchema = new mongoose.Schema(
           enum: ["Point"],
           default: "Point"
         },
-
-        coordinates: {
-          type: [Number]
-        }
+        coordinates: [Number]
       }
     }
   ],
-
-  /* ===============================
-     PRODUCTS
-  =============================== */
 
   items: [
     {
@@ -74,38 +55,32 @@ const OrderSchema = new mongoose.Schema(
     }
   ],
 
-  /* ===============================
-     PRICE
-  =============================== */
-
   subtotal: Number,
+
   deliveryFee: Number,
+
   totalPrice: Number,
 
-  platformFee: Number,
-  driverEarnings: Number,
-
-  /* ===============================
-     DELIVERY LOCATION
-  =============================== */
+  distance: Number,
 
   deliveryLocation: {
+
     type: {
       type: String,
       enum: ["Point"],
       default: "Point"
     },
+
     coordinates: [Number]
+
   },
 
   deliveryAddress: String,
 
-  /* ===============================
-     STATUS
-  =============================== */
-
   status: {
+
     type: String,
+
     enum: [
       "pending",
       "accepted",
@@ -114,12 +89,40 @@ const OrderSchema = new mongoose.Schema(
       "delivered",
       "cancelled"
     ],
-    default: "pending"
-  }
 
-},
-{ timestamps: true }
-);
+    default: "pending"
+
+  },
+
+  /* ===============================
+     Timeline
+  ============================== */
+
+  timeline: [
+
+    {
+
+      status: String,
+
+      time: {
+        type: Date,
+        default: Date.now
+      }
+
+    }
+
+  ],
+
+  /* ===============================
+     Financials
+  ============================== */
+
+  platformFee: Number,
+
+  driverEarnings: Number
+
+}, { timestamps: true });
+
 
 OrderSchema.index({ deliveryLocation: "2dsphere" });
 

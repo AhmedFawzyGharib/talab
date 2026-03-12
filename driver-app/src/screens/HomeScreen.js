@@ -6,29 +6,29 @@ import {
   TouchableOpacity,
   StyleSheet,
   Linking,
-  Alert,
+  Alert
 } from "react-native";
 
-import MapView, { Marker } from "react-native-maps";
+import MapView, { Marker, Polyline } from "react-native-maps";
 import * as Location from "expo-location";
 
 import api from "../api/api";
 import socket from "../socket";
 import { AuthContext } from "../context/AuthContext";
 
-export default function HomeScreen() {
+export default function HomeScreen(){
 
   const { logout } = useContext(AuthContext);
 
-  const [orders, setOrders] = useState([]);
-  const [activeOrder, setActiveOrder] = useState(null);
-  const [distance, setDistance] = useState(null);
+  const [orders,setOrders] = useState([]);
+  const [activeOrder,setActiveOrder] = useState(null);
+  const [selectedOrder,setSelectedOrder] = useState(null);
 
   const trackingInterval = useRef(null);
   const refreshInterval = useRef(null);
 
   /* ===============================
-     Logout
+     LOGOUT
   ================================= */
 
   const handleLogout = () => {
@@ -37,130 +37,105 @@ export default function HomeScreen() {
       "Confirm Logout",
       "Are you sure you want to logout?",
       [
-        { text: "Cancel", style: "cancel" },
+        { text:"Cancel",style:"cancel" },
         {
-          text: "Logout",
-          style: "destructive",
-          onPress: async () => {
+          text:"Logout",
+          style:"destructive",
+          onPress:async ()=>{
             stopTracking();
             clearInterval(refreshInterval.current);
             socket.disconnect();
             await logout();
-          },
-        },
+          }
+        }
       ]
     );
 
   };
 
   /* ===============================
-     Calculate Distance
+     FETCH ORDERS
   ================================= */
 
-  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const fetchOrders = async ()=>{
 
-    const R = 6371;
-
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-
-    const a =
-      Math.sin(dLat / 2) *
-      Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) *
-      Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return R * c;
-
-  };
-
-  /* ===============================
-     Fetch Orders
-  ================================= */
-
-  const fetchOrders = async () => {
-
-    try {
+    try{
 
       const res = await api.get("/orders/available");
 
       setOrders(res.data);
 
-    } catch (err) {
+    }catch(err){
 
-      console.log("LOAD ORDERS ERROR:", err.response?.data);
+      console.log("LOAD ORDERS ERROR:",err.response?.data);
 
     }
 
   };
 
   /* ===============================
-     Check Active Order
+     CHECK ACTIVE ORDER
   ================================= */
 
-  const checkActiveOrder = async () => {
+  const checkActiveOrder = async ()=>{
 
-    try {
+    try{
 
       const res = await api.get("/orders/driver/active");
 
-      if (res.data) {
+      if(res.data){
 
         setActiveOrder(res.data);
 
-        socket.emit("joinOrderRoom", res.data._id);
+        socket.emit("joinOrderRoom",res.data._id);
 
         startLiveTracking(res.data._id);
 
-      } else {
+      }else{
 
         fetchOrders();
 
       }
 
-    } catch (err) {
+    }catch(err){
 
-      console.log("ACTIVE ORDER ERROR:", err.response?.data);
+      console.log("ACTIVE ORDER ERROR:",err.response?.data);
 
     }
 
   };
 
-  useEffect(() => {
+  useEffect(()=>{
 
     checkActiveOrder();
 
-    refreshInterval.current = setInterval(() => {
+    refreshInterval.current = setInterval(()=>{
 
-      if (!activeOrder) fetchOrders();
+      if(!activeOrder) fetchOrders();
 
-    }, 8000);
+    },8000);
 
-    return () => {
+    return ()=>{
 
       stopTracking();
       clearInterval(refreshInterval.current);
 
     };
 
-  }, []);
+  },[]);
 
   /* ===============================
-     Live Tracking
+     LIVE TRACKING
   ================================= */
 
-  const startLiveTracking = async (orderId) => {
+  const startLiveTracking = async(orderId)=>{
 
-    if (trackingInterval.current) return;
+    if(trackingInterval.current) return;
 
     const { status } =
       await Location.requestForegroundPermissionsAsync();
 
-    if (status !== "granted") {
+    if(status !== "granted"){
 
       Alert.alert("Location permission denied");
 
@@ -168,57 +143,37 @@ export default function HomeScreen() {
 
     }
 
-    trackingInterval.current = setInterval(async () => {
+    trackingInterval.current = setInterval(async ()=>{
 
-      try {
+      try{
 
         const location =
           await Location.getCurrentPositionAsync({});
 
-        const { latitude, longitude } =
+        const { latitude,longitude } =
           location.coords;
 
-        if (activeOrder?.deliveryLocation?.coordinates) {
-
-          const lat =
-            activeOrder.deliveryLocation.coordinates[1];
-
-          const lng =
-            activeOrder.deliveryLocation.coordinates[0];
-
-          const dist = calculateDistance(
-            latitude,
-            longitude,
-            lat,
-            lng
-          );
-
-          setDistance(dist.toFixed(2));
-
-        }
-
-        socket.emit("driverLocationUpdate", {
+        socket.emit("driverLocationUpdate",{
           orderId,
-          lat: latitude,
-          lng: longitude,
+          lat:latitude,
+          lng:longitude
         });
 
-      } catch (err) {
+      }catch(err){
 
-        console.log("LOCATION ERROR:", err);
+        console.log("LOCATION ERROR:",err);
 
       }
 
-    }, 5000);
+    },5000);
 
   };
 
-  const stopTracking = () => {
+  const stopTracking = ()=>{
 
-    if (trackingInterval.current) {
+    if(trackingInterval.current){
 
       clearInterval(trackingInterval.current);
-
       trackingInterval.current = null;
 
     }
@@ -226,24 +181,23 @@ export default function HomeScreen() {
   };
 
   /* ===============================
-     Accept Order
+     ACCEPT ORDER
   ================================= */
 
-  const handleAccept = async (order) => {
+  const handleAccept = async(order)=>{
 
-    try {
+    try{
 
       const res = await api.put(`/orders/${order._id}/accept`);
 
       setActiveOrder(res.data.order);
-
       setOrders([]);
 
-      socket.emit("joinOrderRoom", order._id);
+      socket.emit("joinOrderRoom",order._id);
 
       startLiveTracking(order._id);
 
-    } catch {
+    }catch{
 
       Alert.alert("Order already taken");
 
@@ -252,12 +206,12 @@ export default function HomeScreen() {
   };
 
   /* ===============================
-     Update Status
+     UPDATE STATUS
   ================================= */
 
-  const updateStatus = async (status) => {
+  const updateStatus = async(status)=>{
 
-    try {
+    try{
 
       const res = await api.put(
         `/orders/${activeOrder._id}/status`,
@@ -266,33 +220,169 @@ export default function HomeScreen() {
 
       setActiveOrder(res.data.order);
 
-      if (status === "delivered") {
+      if(status === "delivered"){
 
         stopTracking();
 
-        setTimeout(() => {
-
+        setTimeout(()=>{
           setActiveOrder(null);
-
           fetchOrders();
-
-        }, 3000);
+        },3000);
 
       }
 
-    } catch (err) {
+    }catch(err){
 
-      console.log("STATUS ERROR:", err.response?.data);
+      console.log("STATUS ERROR:",err.response?.data);
 
     }
 
   };
 
   /* ===============================
-     Active Order Screen
+     ORDER DETAILS SCREEN (قبل القبول)
   ================================= */
 
-  if (activeOrder?.deliveryLocation?.coordinates) {
+  if(selectedOrder){
+
+    const pickup =
+      selectedOrder.pickups?.[0]?.location?.coordinates;
+
+    const delivery =
+      selectedOrder.deliveryLocation?.coordinates;
+
+    const pickupLat = pickup ? pickup[1] : null;
+    const pickupLng = pickup ? pickup[0] : null;
+
+    const deliveryLat = delivery ? delivery[1] : null;
+    const deliveryLng = delivery ? delivery[0] : null;
+
+    return(
+
+      <View style={{flex:1}}>
+
+        {pickupLat && deliveryLat && (
+
+          <MapView
+            style={{flex:1}}
+            initialRegion={{
+              latitude:pickupLat,
+              longitude:pickupLng,
+              latitudeDelta:0.05,
+              longitudeDelta:0.05
+            }}
+          >
+
+            <Marker
+              coordinate={{
+                latitude:pickupLat,
+                longitude:pickupLng
+              }}
+              title="Pickup"
+              pinColor="green"
+            />
+
+            <Marker
+              coordinate={{
+                latitude:deliveryLat,
+                longitude:deliveryLng
+              }}
+              title="Delivery"
+              pinColor="red"
+            />
+
+            <Polyline
+              coordinates={[
+                { latitude:pickupLat, longitude:pickupLng },
+                { latitude:deliveryLat, longitude:deliveryLng }
+              ]}
+              strokeWidth={4}
+              strokeColor="blue"
+            />
+
+          </MapView>
+
+        )}
+
+        <View style={styles.panel}>
+
+          <Text style={styles.title}>Order Details</Text>
+
+          {selectedOrder.pickups?.length > 0 && (
+
+            <View style={styles.itemsBox}>
+
+              <Text style={styles.itemsTitle}>
+                📍 Pickup
+              </Text>
+
+              <Text>
+                {selectedOrder.pickups[0].name}
+              </Text>
+
+              {selectedOrder.pickups[0].note && (
+
+                <Text>
+                  Items: {selectedOrder.pickups[0].note}
+                </Text>
+
+              )}
+
+            </View>
+
+          )}
+
+          <View style={styles.itemsBox}>
+
+            <Text style={styles.itemsTitle}>
+              📍 Delivery
+            </Text>
+
+            <Text>
+              {selectedOrder.deliveryAddress || "Customer Location"}
+            </Text>
+
+          </View>
+
+          {selectedOrder.distance && (
+            <Text>📏 Distance: {selectedOrder.distance} km</Text>
+          )}
+
+          {selectedOrder.totalPrice && (
+            <Text>💰 Estimated Price: {selectedOrder.totalPrice} SAR</Text>
+          )}
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={()=>handleAccept(selectedOrder)}
+          >
+            <Text style={styles.buttonText}>
+              Accept Order
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={()=>setSelectedOrder(null)}
+          >
+            <Text style={styles.buttonText}>
+              Back
+            </Text>
+          </TouchableOpacity>
+
+        </View>
+
+      </View>
+
+    );
+
+  }
+
+  /* ===============================
+     ACTIVE ORDER SCREEN
+  ================================= */
+
+  if(activeOrder?.deliveryLocation?.coordinates){
 
     const lat =
       activeOrder.deliveryLocation.coordinates[1];
@@ -300,9 +390,9 @@ export default function HomeScreen() {
     const lng =
       activeOrder.deliveryLocation.coordinates[0];
 
-    return (
+    return(
 
-      <View style={{ flex: 1 }}>
+      <View style={{flex:1}}>
 
         <TouchableOpacity
           style={styles.logoutButton}
@@ -312,17 +402,17 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         <MapView
-          style={{ flex: 1 }}
+          style={{flex:1}}
           initialRegion={{
-            latitude: lat,
-            longitude: lng,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
+            latitude:lat,
+            longitude:lng,
+            latitudeDelta:0.01,
+            longitudeDelta:0.01
           }}
         >
 
           <Marker
-            coordinate={{ latitude: lat, longitude: lng }}
+            coordinate={{ latitude:lat,longitude:lng }}
             title="Customer"
             pinColor="green"
           />
@@ -337,71 +427,11 @@ export default function HomeScreen() {
 
           <Text>Total: {activeOrder.totalPrice || 0} SAR</Text>
 
-          <Text>
-            Type: {activeOrder.type === "custom"
-              ? "Custom Delivery"
-              : "Merchant Order"}
-          </Text>
-
-          {distance && (
-            <Text>Distance: {distance} km</Text>
-          )}
-
-          {/* Merchant Order Items */}
-
-          {activeOrder.items?.length > 0 && (
-
-            <View style={styles.itemsBox}>
-
-              <Text style={styles.itemsTitle}>
-                Order Items
-              </Text>
-
-              {activeOrder.items.map((item, index) => (
-
-                <Text key={index}>
-                  {item.name} x{item.quantity}
-                </Text>
-
-              ))}
-
-            </View>
-
-          )}
-
-          {/* Custom Delivery */}
-
-          {activeOrder.type === "custom" && (
-
-            <View style={styles.itemsBox}>
-
-              <Text style={styles.itemsTitle}>
-                Custom Delivery
-              </Text>
-
-              {activeOrder.pickupName && (
-                <Text>
-                  Pickup: {activeOrder.pickupName}
-                </Text>
-              )}
-
-              {activeOrder.note && (
-                <Text>
-                  Items: {activeOrder.note}
-                </Text>
-              )}
-
-            </View>
-
-          )}
-
           <TouchableOpacity
             style={styles.navigateButton}
-            onPress={() =>
-              Linking.openURL(
-                `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
-              )
-            }
+            onPress={()=>Linking.openURL(
+              `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+            )}
           >
             <Text style={styles.buttonText}>
               Navigate
@@ -409,24 +439,15 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           {activeOrder.status === "accepted" && (
-            <Button
-              text="Picked"
-              onPress={() => updateStatus("picked")}
-            />
+            <Button text="Picked" onPress={()=>updateStatus("picked")} />
           )}
 
           {activeOrder.status === "picked" && (
-            <Button
-              text="On The Way"
-              onPress={() => updateStatus("on_the_way")}
-            />
+            <Button text="On The Way" onPress={()=>updateStatus("on_the_way")} />
           )}
 
           {activeOrder.status === "on_the_way" && (
-            <Button
-              text="Delivered"
-              onPress={() => updateStatus("delivered")}
-            />
+            <Button text="Delivered" onPress={()=>updateStatus("delivered")} />
           )}
 
         </View>
@@ -438,10 +459,10 @@ export default function HomeScreen() {
   }
 
   /* ===============================
-     Available Orders
+     AVAILABLE ORDERS
   ================================= */
 
-  return (
+  return(
 
     <View style={styles.container}>
 
@@ -454,8 +475,8 @@ export default function HomeScreen() {
 
       <FlatList
         data={orders}
-        keyExtractor={(item) => item._id}
-        renderItem={({ item }) => (
+        keyExtractor={(item)=>item._id}
+        renderItem={({ item })=>(
 
           <View style={styles.card}>
 
@@ -470,8 +491,17 @@ export default function HomeScreen() {
             </Text>
 
             <TouchableOpacity
+              style={styles.detailsButton}
+              onPress={()=>setSelectedOrder(item)}
+            >
+              <Text style={styles.buttonText}>
+                View Details
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={styles.button}
-              onPress={() => handleAccept(item)}
+              onPress={()=>handleAccept(item)}
             >
               <Text style={styles.buttonText}>
                 Accept Order
@@ -494,7 +524,7 @@ export default function HomeScreen() {
 
 }
 
-const Button = ({ text, onPress }) => (
+const Button = ({ text,onPress })=>(
   <TouchableOpacity
     style={styles.button}
     onPress={onPress}
@@ -505,81 +535,77 @@ const Button = ({ text, onPress }) => (
 
 const styles = StyleSheet.create({
 
-  container: {
-    flex: 1,
-    padding: 20,
+  container:{ flex:1,padding:20 },
+
+  logoutButton:{
+    backgroundColor:"#e74c3c",
+    padding:10,
+    borderRadius:8,
+    alignItems:"center",
+    marginBottom:10
   },
 
-  logoutButton: {
-    backgroundColor: "#e74c3c",
-    padding: 10,
-    borderRadius: 8,
-    alignItems: "center",
-    marginBottom: 10,
+  logoutText:{ color:"#fff",fontWeight:"bold" },
+
+  card:{
+    backgroundColor:"#f1f1f1",
+    padding:15,
+    marginBottom:12,
+    borderRadius:10
   },
 
-  logoutText: {
-    color: "#fff",
-    fontWeight: "bold",
+  panel:{
+    backgroundColor:"#fff",
+    padding:20,
+    borderTopLeftRadius:20,
+    borderTopRightRadius:20
   },
 
-  card: {
-    backgroundColor: "#f1f1f1",
-    padding: 15,
-    marginBottom: 12,
-    borderRadius: 10,
+  button:{
+    backgroundColor:"#27ae60",
+    padding:12,
+    marginTop:12,
+    borderRadius:8,
+    alignItems:"center"
   },
 
-  panel: {
-    backgroundColor: "#fff",
-    padding: 20,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+  detailsButton:{
+    backgroundColor:"#3498db",
+    padding:12,
+    marginTop:10,
+    borderRadius:8,
+    alignItems:"center"
   },
 
-  button: {
-    backgroundColor: "#27ae60",
-    padding: 12,
-    marginTop: 12,
-    borderRadius: 8,
-    alignItems: "center",
+  cancelButton:{
+    backgroundColor:"#7f8c8d",
+    padding:12,
+    marginTop:10,
+    borderRadius:8,
+    alignItems:"center"
   },
 
-  navigateButton: {
-    backgroundColor: "#8e44ad",
-    padding: 12,
-    marginTop: 10,
-    borderRadius: 8,
-    alignItems: "center",
+  navigateButton:{
+    backgroundColor:"#8e44ad",
+    padding:12,
+    marginTop:10,
+    borderRadius:8,
+    alignItems:"center"
   },
 
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
+  buttonText:{ color:"#fff",fontWeight:"bold" },
+
+  title:{ fontSize:18,fontWeight:"bold",marginBottom:10 },
+
+  empty:{ textAlign:"center",marginTop:40,color:"gray" },
+
+  itemsBox:{
+    marginTop:10,
+    padding:10,
+    backgroundColor:"#eee",
+    borderRadius:8
   },
 
-  title: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-
-  empty: {
-    textAlign: "center",
-    marginTop: 40,
-    color: "gray",
-  },
-
-  itemsBox: {
-    marginTop: 10,
-    padding: 10,
-    backgroundColor: "#eee",
-    borderRadius: 8,
-  },
-
-  itemsTitle: {
-    fontWeight: "bold",
-    marginBottom: 5,
-  },
+  itemsTitle:{ fontWeight:"bold",marginBottom:5 }
 
 });

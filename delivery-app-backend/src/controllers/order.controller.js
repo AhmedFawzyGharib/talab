@@ -1,41 +1,95 @@
 const Order = require("../models/Order");
 const Product = require("../models/Product");
 
+/* ===============================
+   Distance Calculation
+================================= */
+
+function calculateDistance(lat1, lon1, lat2, lon2) {
+
+  const R = 6371;
+
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+
+}
+
+/* ===============================
+   Dynamic Pricing
+================================= */
+
+function calculateDeliveryFee(distance) {
+
+  const baseFee = 5;
+
+  const pricePerKm = 2;
+
+  const surgeMultiplier = 1;
+
+  return Math.max(
+    baseFee,
+    distance * pricePerKm * surgeMultiplier
+  );
+
+}
+
 /* =================================
    CREATE ORDER (Merchant Order)
 ================================= */
 
 exports.createOrder = async (req, res) => {
+
   try {
-    const { items, deliveryLocation, deliveryAddress, merchant } =
-      req.body;
+
+    const {
+      items,
+      deliveryLocation,
+      deliveryAddress,
+      merchant
+    } = req.body;
 
     let processedItems = [];
+
     let subtotal = 0;
 
     for (let item of items) {
-      const product = await Product.findById(item.productId)
+
+      const product = await Product
+        .findById(item.productId)
         .populate("merchantId");
 
       if (!product) {
         return res.status(404).json({
-          message: "Product not found",
+          message: "Product not found"
         });
       }
 
       if (!product.isAvailable) {
         return res.status(400).json({
-          message: "Product not available",
+          message: "Product not available"
         });
       }
 
       if (!product.merchantId.isActive) {
         return res.status(400).json({
-          message: "Merchant is closed",
+          message: "Merchant is closed"
         });
       }
 
-      const itemTotal = product.price * item.quantity;
+      const itemTotal =
+        product.price * item.quantity;
+
       subtotal += itemTotal;
 
       processedItems.push({
@@ -43,19 +97,27 @@ exports.createOrder = async (req, res) => {
         name: product.name,
         price: product.price,
         quantity: item.quantity,
-        total: itemTotal,
+        total: itemTotal
       });
+
     }
 
     const deliveryFee = 10;
+
     const totalPrice = subtotal + deliveryFee;
 
     const order = new Order({
+
       customer: req.user._id,
+
       merchant,
+
       items: processedItems,
+
       subtotal,
+
       deliveryFee,
+
       totalPrice,
 
       type: "merchant",
@@ -64,22 +126,39 @@ exports.createOrder = async (req, res) => {
         type: "Point",
         coordinates: [
           deliveryLocation.longitude,
-          deliveryLocation.latitude,
-        ],
+          deliveryLocation.latitude
+        ]
       },
 
       deliveryAddress,
+
       status: "pending",
-      driver: null,
+
+      timeline: [
+        {
+          status: "pending",
+          time: new Date()
+        }
+      ]
+
     });
 
     await order.save();
+
+    /* ===============================
+       Notify Drivers
+    =============================== */
 
     const io = req.app.get("io");
     const onlineDrivers = req.app.get("onlineDrivers");
 
     for (const driverId in onlineDrivers) {
-      io.to(onlineDrivers[driverId]).emit("newOrder", order);
+
+      io.to(onlineDrivers[driverId]).emit(
+        "newOrder",
+        order
+      );
+
     }
 
     res.status(201).json(order);
@@ -89,10 +168,11 @@ exports.createOrder = async (req, res) => {
     console.error("CREATE ORDER ERROR:", error);
 
     res.status(500).json({
-      message: "Error creating order",
+      message: "Error creating order"
     });
 
   }
+
 };
 
 /* =================================
@@ -107,8 +187,22 @@ exports.createCustomDelivery = async (req, res) => {
       pickupName,
       note,
       pickupLocation,
-      deliveryLocation
+      deliveryLocation,
+      deliveryAddress
     } = req.body;
+
+    const distance = calculateDistance(
+
+      pickupLocation.latitude,
+      pickupLocation.longitude,
+
+      deliveryLocation.latitude,
+      deliveryLocation.longitude
+
+    );
+
+    const deliveryFee =
+      calculateDeliveryFee(distance);
 
     const order = new Order({
 
@@ -116,16 +210,19 @@ exports.createCustomDelivery = async (req, res) => {
 
       type: "custom",
 
-      pickupName,
-      note,
-
-      pickupLocation: {
-        type: "Point",
-        coordinates: [
-          pickupLocation.longitude,
-          pickupLocation.latitude
-        ]
-      },
+      pickups: [
+        {
+          name: pickupName,
+          note,
+          location: {
+            type: "Point",
+            coordinates: [
+              pickupLocation.longitude,
+              pickupLocation.latitude
+            ]
+          }
+        }
+      ],
 
       deliveryLocation: {
         type: "Point",
@@ -135,15 +232,30 @@ exports.createCustomDelivery = async (req, res) => {
         ]
       },
 
-      totalPrice: 0,
+      deliveryAddress,
+
+      distance: distance.toFixed(2),
+
+      deliveryFee,
+
+      totalPrice: deliveryFee,
 
       status: "pending",
 
-      driver: null
+      timeline: [
+        {
+          status: "pending",
+          time: new Date()
+        }
+      ]
 
     });
 
     await order.save();
+
+    /* ===============================
+       Notify Drivers
+    =============================== */
 
     const io = req.app.get("io");
     const onlineDrivers = req.app.get("onlineDrivers");
@@ -180,7 +292,7 @@ exports.getMyOrders = async (req, res) => {
   try {
 
     const orders = await Order.find({
-      customer: req.user._id,
+      customer: req.user._id
     })
       .populate("merchant")
       .populate("driver")
@@ -192,7 +304,7 @@ exports.getMyOrders = async (req, res) => {
   } catch (error) {
 
     res.status(500).json({
-      message: "Error loading orders",
+      message: "Error loading orders"
     });
 
   }
@@ -208,11 +320,11 @@ exports.getAvailableOrders = async (req, res) => {
   try {
 
     const orders = await Order.find({
+
       status: "pending",
-      $or: [
-        { driver: { $exists: false } },
-        { driver: null }
-      ]
+
+      driver: null
+
     })
       .populate("merchant")
       .populate("customer")
@@ -242,33 +354,43 @@ exports.acceptOrder = async (req, res) => {
     const { id } = req.params;
 
     const order = await Order.findOneAndUpdate(
+
       {
         _id: id,
         status: "pending",
-        $or: [
-          { driver: { $exists: false } },
-          { driver: null },
-        ],
+        driver: null
       },
+
       {
         status: "accepted",
-        driver: req.user._id,
+        driver: req.user._id
       },
+
       { new: true }
+
     );
 
     if (!order) {
+
       return res.status(400).json({
         message: "Order already taken"
       });
+
     }
 
-    res.json({ order });
+    order.timeline.push({
+      status: "accepted",
+      time: new Date()
+    });
+
+    await order.save();
+
+    res.json(order);
 
   } catch (error) {
 
     res.status(500).json({
-      message: "Error accepting order",
+      message: "Error accepting order"
     });
 
   }
@@ -284,12 +406,17 @@ exports.updateOrderStatus = async (req, res) => {
   try {
 
     const { id } = req.params;
+
     const { status } = req.body;
 
     const allowedTransitions = {
+
       accepted: "picked",
+
       picked: "on_the_way",
-      on_the_way: "delivered",
+
+      on_the_way: "delivered"
+
     };
 
     const order = await Order.findById(id)
@@ -297,29 +424,44 @@ exports.updateOrderStatus = async (req, res) => {
       .populate("merchant")
       .populate("items.product");
 
-    if (!order)
+    if (!order) {
+
       return res.status(404).json({
-        message: "Not found",
+        message: "Order not found"
       });
 
-    if (order.driver.toString() !== req.user._id.toString())
+    }
+
+    if (order.driver.toString() !== req.user._id.toString()) {
+
       return res.status(403).json({
-        message: "Not yours",
+        message: "Not your order"
       });
 
-    const expectedNext = allowedTransitions[order.status];
+    }
+
+    const expectedNext =
+      allowedTransitions[order.status];
 
     if (status !== expectedNext) {
+
       return res.status(400).json({
-        message: `Next expected: ${expectedNext}`,
+        message: `Next expected: ${expectedNext}`
       });
+
     }
 
     order.status = status;
 
+    order.timeline.push({
+      status,
+      time: new Date()
+    });
+
     if (status === "delivered") {
 
-      const platformFee = order.totalPrice * 0.1;
+      const platformFee =
+        order.totalPrice * 0.1;
 
       order.platformFee = platformFee;
 
@@ -330,12 +472,12 @@ exports.updateOrderStatus = async (req, res) => {
 
     await order.save();
 
-    res.json({ order });
+    res.json(order);
 
   } catch (error) {
 
     res.status(500).json({
-      message: "Error updating",
+      message: "Error updating order"
     });
 
   }
@@ -351,10 +493,17 @@ exports.getActiveDriverOrder = async (req, res) => {
   try {
 
     const order = await Order.findOne({
+
       driver: req.user._id,
+
       status: {
-        $in: ["accepted", "picked", "on_the_way"],
-      },
+        $in: [
+          "accepted",
+          "picked",
+          "on_the_way"
+        ]
+      }
+
     })
       .populate("merchant")
       .populate("customer")
@@ -365,7 +514,7 @@ exports.getActiveDriverOrder = async (req, res) => {
   } catch (error) {
 
     res.status(500).json({
-      message: "Error loading active order",
+      message: "Error loading active order"
     });
 
   }

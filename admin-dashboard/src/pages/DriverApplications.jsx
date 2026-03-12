@@ -25,7 +25,7 @@ export default function DriverApplications() {
       setLoading(true);
 
       await api.patch(
-        `/admin/driver-applications/${id}/status`,
+        `/admin/driver-applications/${id}`,
         { status }
       );
 

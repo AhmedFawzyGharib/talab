@@ -20,7 +20,7 @@ export default function MerchantApplications() {
   const updateStatus = async (id, status) => {
     try {
       await api.patch(
-        `/admin/merchant-applications/${id}/status`,
+        `/admin/merchant-applications/${id}`,
         { status }
       );
 

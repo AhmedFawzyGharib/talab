@@ -11,25 +11,25 @@ const bcrypt = require("bcryptjs");
 /* ===============================
    Dashboard Stats
 ================================= */
+
 const getDashboardStats = async (req, res) => {
   try {
+
     const totalDrivers = await Driver.countDocuments();
     const totalMerchants = await Merchant.countDocuments();
     const totalOrders = await Order.countDocuments();
 
-    const pendingDrivers =
-      await DriverApplication.countDocuments({
-        status: "pending",
-      });
+    const pendingDrivers = await DriverApplication.countDocuments({
+      status: "pending"
+    });
 
-    const pendingMerchants =
-      await MerchantApplication.countDocuments({
-        status: "pending",
-      });
+    const pendingMerchants = await MerchantApplication.countDocuments({
+      status: "pending"
+    });
 
     const revenue = await Order.aggregate([
       { $match: { status: "delivered" } },
-      { $group: { _id: null, total: { $sum: "$totalPrice" } } },
+      { $group: { _id: null, total: { $sum: "$totalPrice" } } }
     ]);
 
     res.json({
@@ -38,153 +38,290 @@ const getDashboardStats = async (req, res) => {
       totalOrders,
       pendingDrivers,
       pendingMerchants,
-      totalRevenue: revenue[0]?.total || 0,
+      totalRevenue: revenue[0]?.total || 0
     });
+
   } catch (err) {
-    console.error("DASHBOARD ERROR:", err);
-    res.status(500).json({ message: "Server Error" });
+
+    console.error(err);
+
+    res.status(500).json({
+      message: "Server Error"
+    });
+
   }
 };
 
 /* ===============================
-   Driver Applications
+   ORDERS MANAGEMENT
 ================================= */
-const getDriverApplications = async (req, res) => {
+
+const getAllOrders = async (req, res) => {
+
   try {
-    const apps = await DriverApplication.find().sort({
-      createdAt: -1,
+
+    const orders = await Order.find()
+      .populate("customer", "name phone")
+      .populate("merchant", "name")
+      .populate("driver", "name phone")
+      .sort({ createdAt: -1 });
+
+    res.json(orders);
+
+  } catch (error) {
+
+    console.error(error);
+
+    res.status(500).json({
+      message: "Server Error"
     });
 
-    res.json(apps);
-  } catch (err) {
-    console.error("GET DRIVER APPS ERROR:", err);
-    res.status(500).json({ message: "Server Error" });
   }
+
+};
+
+const cancelOrder = async (req, res) => {
+
+  try {
+
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found"
+      });
+    }
+
+    order.status = "cancelled";
+
+    await order.save();
+
+    res.json({
+      message: "Order cancelled"
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Server Error"
+    });
+
+  }
+
+};
+
+const getAvailableDrivers = async (req, res) => {
+
+  try {
+
+    const drivers = await Driver.find()
+      .populate("userId", "name phone");
+
+    res.json(drivers);
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Server Error"
+    });
+
+  }
+
+};
+
+const assignDriver = async (req, res) => {
+
+  try {
+
+    const { driverId } = req.body;
+
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found"
+      });
+    }
+
+    order.driver = driverId;
+    order.status = "accepted";
+
+    await order.save();
+
+    res.json({
+      message: "Driver assigned"
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Server Error"
+    });
+
+  }
+
+};
+
+/* ===============================
+   DRIVER APPLICATIONS
+================================= */
+
+const getDriverApplications = async (req, res) => {
+
+  try {
+
+    const apps = await DriverApplication.find()
+      .sort({ createdAt: -1 });
+
+    res.json(apps);
+
+  } catch (err) {
+
+    res.status(500).json({
+      message: "Server Error"
+    });
+
+  }
+
 };
 
 const updateDriverStatus = async (req, res) => {
+
   try {
-    const { id } = req.params;
+
     const { status } = req.body;
 
-    const application =
-      await DriverApplication.findById(id);
+    const application = await DriverApplication.findById(req.params.id);
 
     if (!application) {
       return res.status(404).json({
-        message: "Application not found",
+        message: "Application not found"
       });
     }
 
     application.status = status;
+
     await application.save();
 
-    if (status === "approved") {
-      const io = req.app.get("io");
-      const onlineDrivers =
-        req.app.get("onlineDrivers");
-
-      const socketId =
-        onlineDrivers[application.phone];
-
-      if (socketId) {
-        io.to(socketId).emit(
-          "driverApproved",
-          { phone: application.phone }
-        );
-      }
-    }
-
-    res.json({ message: "Updated" });
+    res.json({
+      message: "Status updated"
+    });
 
   } catch (err) {
-    console.error(err);
+
     res.status(500).json({
-      message: "Server error",
+      message: "Server Error"
     });
+
   }
+
 };
 
 /* ===============================
-   Approved Drivers
+   DRIVERS
 ================================= */
+
 const getDrivers = async (req, res) => {
+
   try {
+
     const drivers = await Driver.find()
       .populate("userId", "-password")
       .sort({ createdAt: -1 });
 
     res.json(drivers);
+
   } catch (err) {
-    console.error("GET DRIVERS ERROR:", err);
-    res.status(500).json({ message: "Server Error" });
+
+    res.status(500).json({
+      message: "Server Error"
+    });
+
   }
+
 };
 
 /* ===============================
-   Merchant Applications
+   MERCHANT APPLICATIONS
 ================================= */
+
 const getMerchantApplications = async (req, res) => {
+
   try {
-    const apps = await MerchantApplication.find().sort({
-      createdAt: -1,
-    });
+
+    const apps = await MerchantApplication.find()
+      .sort({ createdAt: -1 });
 
     res.json(apps);
+
   } catch (err) {
-    console.error("GET MERCHANT APPS ERROR:", err);
-    res.status(500).json({ message: "Server Error" });
+
+    res.status(500).json({
+      message: "Server Error"
+    });
+
   }
+
 };
 
 const updateMerchantStatus = async (req, res) => {
+
   try {
-    const { id } = req.params;
+
     const { status } = req.body;
 
-    const application =
-      await MerchantApplication.findById(id);
+    const application = await MerchantApplication.findById(req.params.id);
 
     if (!application) {
       return res.status(404).json({
-        message: "Not found",
+        message: "Not found"
       });
     }
 
     application.status = status;
+
     await application.save();
 
     res.json({
-      message: "Merchant status updated",
+      message: "Merchant status updated"
     });
+
   } catch (err) {
-    console.error("UPDATE MERCHANT ERROR:", err);
-    res.status(500).json({ message: "Server Error" });
+
+    res.status(500).json({
+      message: "Server Error"
+    });
+
   }
+
 };
 
 /* ===============================
-   Merchants Management
+   MERCHANTS CRUD
 ================================= */
 
 const getMerchants = async (req, res) => {
+
   try {
+
     const merchants = await Merchant.find()
       .populate("user", "-password")
       .sort({ createdAt: -1 });
 
     res.json(merchants);
+
   } catch (err) {
-    console.error("GET MERCHANTS ERROR:", err);
-    res.status(500).json({ message: "Server Error" });
+
+    res.status(500).json({
+      message: "Server Error"
+    });
+
   }
+
 };
 
-/* ===============================
-   CREATE MERCHANT (Admin)
-================================= */
-
 const createMerchant = async (req, res) => {
+
   try {
 
     const {
@@ -192,113 +329,73 @@ const createMerchant = async (req, res) => {
       phone,
       password,
       type,
-      image,
       description,
       lat,
       lng
     } = req.body;
 
-    // تحقق من وجود المستخدم
-    const existingUser = await User.findOne({ phone });
+    const existing = await User.findOne({ phone });
 
-    if (existingUser) {
+    if (existing) {
       return res.status(400).json({
-        message: "User already exists",
+        message: "User exists"
       });
     }
 
-    // تشفير كلمة المرور
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashed = await bcrypt.hash(password, 10);
 
-    // إنشاء حساب المستخدم
     const user = await User.create({
       name,
       phone,
-      password: hashedPassword,
-      role: "merchant",
+      password: hashed,
+      role: "merchant"
     });
 
-    // إنشاء ملف التاجر
     const merchant = await Merchant.create({
       user: user._id,
       name,
       type,
-      image,
       description,
-      location: {
-        lat,
-        lng,
-      },
+      location: { lat, lng }
     });
 
     res.status(201).json(merchant);
 
   } catch (err) {
 
-    console.error("CREATE MERCHANT ERROR:", err);
-
     res.status(500).json({
-      message: "Server Error",
+      message: "Server Error"
     });
 
   }
-};
-const updateMerchant = async (req, res) => {
-  try {
-    const merchant =
-      await Merchant.findById(req.params.id);
 
-    if (!merchant) {
-      return res.status(404).json({
-        message: "Merchant not found",
-      });
-    }
-
-    Object.assign(merchant, req.body);
-
-    await merchant.save();
-
-    res.json(merchant);
-
-  } catch (err) {
-    console.error("UPDATE MERCHANT ERROR:", err);
-    res.status(500).json({ message: "Server Error" });
-  }
 };
 
 const deleteMerchant = async (req, res) => {
+
   try {
-    const merchant =
-      await Merchant.findById(req.params.id);
 
-    if (!merchant) {
-      return res.status(404).json({
-        message: "Merchant not found",
-      });
-    }
-
-    await merchant.deleteOne();
+    await Merchant.findByIdAndDelete(req.params.id);
 
     res.json({
-      message: "Merchant deleted",
+      message: "Merchant deleted"
     });
 
   } catch (err) {
-    console.error("DELETE MERCHANT ERROR:", err);
-    res.status(500).json({ message: "Server Error" });
+
+    res.status(500).json({
+      message: "Server Error"
+    });
+
   }
+
 };
 
 const toggleMerchantStatus = async (req, res) => {
-  try {
-    const merchant =
-      await Merchant.findById(req.params.id);
 
-    if (!merchant) {
-      return res.status(404).json({
-        message: "Merchant not found",
-      });
-    }
+  try {
+
+    const merchant = await Merchant.findById(req.params.id);
 
     merchant.isActive = !merchant.isActive;
 
@@ -307,134 +404,84 @@ const toggleMerchantStatus = async (req, res) => {
     res.json(merchant);
 
   } catch (err) {
-    console.error("TOGGLE MERCHANT ERROR:", err);
-    res.status(500).json({ message: "Server Error" });
+
+    res.status(500).json({
+      message: "Server Error"
+    });
+
   }
+
 };
 
 /* ===============================
-   Product Management
+   PRODUCTS
 ================================= */
 
 const createProduct = async (req, res) => {
+
   try {
 
-    const {
-      name,
-      price,
-      quantity,
-      description,
-      merchantId
-    } = req.body;
-
-    const image = req.file
-      ? req.file.filename
-      : null;
-
     const product = await Product.create({
-
-      name,
-      price,
-      quantity,
-      description,
-      merchantId,
-      image
-
+      ...req.body,
+      image: req.file?.filename
     });
 
     res.status(201).json(product);
 
-  } catch (err) {
-
-    console.error("CREATE PRODUCT ERROR:", err);
+  } catch (error) {
 
     res.status(500).json({
-      message: "Server Error",
+      message: "Server Error"
     });
 
   }
+
 };
 
-/* ===============================
-   GET PRODUCTS
-================================= */
-
 const getProducts = async (req, res) => {
+
   try {
 
     const products = await Product.find()
-      .populate("merchantId")
-      .sort({ createdAt: -1 });
+      .populate("merchantId");
 
     res.json(products);
 
-  } catch (err) {
-
-    console.error("GET PRODUCTS ERROR:", err);
+  } catch (error) {
 
     res.status(500).json({
-      message: "Server Error",
+      message: "Server Error"
     });
 
   }
-};
 
-const updateProduct = async (req, res) => {
-  try {
-    const product =
-      await Product.findById(req.params.id);
-
-    if (!product) {
-      return res.status(404).json({
-        message: "Product not found",
-      });
-    }
-
-    Object.assign(product, req.body);
-
-    await product.save();
-
-    res.json(product);
-
-  } catch (err) {
-    console.error("UPDATE PRODUCT ERROR:", err);
-    res.status(500).json({ message: "Server Error" });
-  }
 };
 
 const deleteProduct = async (req, res) => {
+
   try {
-    const product =
-      await Product.findById(req.params.id);
 
-    if (!product) {
-      return res.status(404).json({
-        message: "Product not found",
-      });
-    }
-
-    await product.deleteOne();
+    await Product.findByIdAndDelete(req.params.id);
 
     res.json({
-      message: "Product deleted",
+      message: "Product deleted"
     });
 
-  } catch (err) {
-    console.error("DELETE PRODUCT ERROR:", err);
-    res.status(500).json({ message: "Server Error" });
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Server Error"
+    });
+
   }
+
 };
 
 const toggleProductStatus = async (req, res) => {
-  try {
-    const product =
-      await Product.findById(req.params.id);
 
-    if (!product) {
-      return res.status(404).json({
-        message: "Product not found",
-      });
-    }
+  try {
+
+    const product = await Product.findById(req.params.id);
 
     product.isAvailable = !product.isAvailable;
 
@@ -442,77 +489,97 @@ const toggleProductStatus = async (req, res) => {
 
     res.json(product);
 
-  } catch (err) {
-    console.error("TOGGLE PRODUCT ERROR:", err);
-    res.status(500).json({ message: "Server Error" });
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Server Error"
+    });
+
   }
+
 };
 
 /* ===============================
-   Withdraw
+   WITHDRAW
 ================================= */
+
 const getWithdrawRequests = async (req, res) => {
+
   try {
+
     const requests = await WithdrawRequest.find()
       .populate("driver")
       .sort({ createdAt: -1 });
 
     res.json(requests);
-  } catch (err) {
-    console.error("GET WITHDRAW ERROR:", err);
-    res.status(500).json({ message: "Server Error" });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Server Error"
+    });
+
   }
+
 };
 
 const updateWithdrawStatus = async (req, res) => {
+
   try {
-    const { id } = req.params;
+
     const { status } = req.body;
 
-    const request =
-      await WithdrawRequest.findById(id);
-
-    if (!request) {
-      return res.status(404).json({
-        message: "Not found",
-      });
-    }
+    const request = await WithdrawRequest.findById(req.params.id);
 
     request.status = status;
+
     await request.save();
 
     res.json({
-      message: `Withdraw ${status}`,
+      message: `Withdraw ${status}`
     });
-  } catch (err) {
-    console.error("WITHDRAW UPDATE ERROR:", err);
-    res.status(500).json({ message: "Server Error" });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Server Error"
+    });
+
   }
+
 };
 
 /* ===============================
    EXPORTS
 ================================= */
+
 module.exports = {
+
   getDashboardStats,
+
+  getAllOrders,
+  cancelOrder,
+  getAvailableDrivers,
+  assignDriver,
+
   getDriverApplications,
   updateDriverStatus,
   getDrivers,
+
   getMerchantApplications,
   updateMerchantStatus,
 
   getMerchants,
   createMerchant,
-  updateMerchant,
   deleteMerchant,
   toggleMerchantStatus,
 
   createProduct,
   getProducts,
-  updateProduct,
   deleteProduct,
   toggleProductStatus,
 
   getWithdrawRequests,
-  updateWithdrawStatus,
+  updateWithdrawStatus
+
 };

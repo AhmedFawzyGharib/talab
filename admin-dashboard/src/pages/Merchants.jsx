@@ -7,9 +7,6 @@ export default function Merchants() {
   const [merchants, setMerchants] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // ===============================
-  // Fetch Merchants
-  // ===============================
   useEffect(() => {
 
     const fetchMerchants = async () => {
@@ -36,10 +33,9 @@ export default function Merchants() {
 
   }, []);
 
-  // ===============================
-  // Delete Merchant
-  // ===============================
   const deleteMerchant = async (id) => {
+
+    if (!window.confirm("Delete this merchant?")) return;
 
     try {
 
@@ -57,9 +53,6 @@ export default function Merchants() {
 
   };
 
-  // ===============================
-  // Toggle Merchant
-  // ===============================
   const toggleMerchant = async (id) => {
 
     try {
@@ -80,7 +73,15 @@ export default function Merchants() {
 
   };
 
-  if (loading) return <p>Loading merchants...</p>;
+  if (loading) {
+
+    return (
+      <div className="flex justify-center py-10">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+      </div>
+    );
+
+  }
 
   return (
     <div>
@@ -93,7 +94,7 @@ export default function Merchants() {
 
         <Link
           to="/merchants/create"
-          className="bg-green-500 text-white px-4 py-2 rounded"
+          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
         >
           Create Merchant
         </Link>
@@ -123,12 +124,15 @@ export default function Merchants() {
                 Type: {merchant.type}
               </p>
 
-              <p>
-                Status:
-                {merchant.isActive
-                  ? " Active"
-                  : " Disabled"}
-              </p>
+              <span
+                className={`px-2 py-1 rounded text-sm ${
+                  merchant.isActive
+                    ? "bg-green-100 text-green-700"
+                    : "bg-red-100 text-red-700"
+                }`}
+              >
+                {merchant.isActive ? "Active" : "Disabled"}
+              </span>
 
             </div>
 
@@ -136,21 +140,21 @@ export default function Merchants() {
 
               <button
                 onClick={() => toggleMerchant(merchant._id)}
-                className="bg-blue-500 text-white px-3 py-1 rounded"
+                className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
               >
                 Toggle
               </button>
 
               <button
                 onClick={() => deleteMerchant(merchant._id)}
-                className="bg-red-500 text-white px-3 py-1 rounded"
+                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
               >
                 Delete
               </button>
 
               <Link
                 to={`/products?merchant=${merchant._id}`}
-                className="bg-purple-500 text-white px-3 py-1 rounded"
+                className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded"
               >
                 Products
               </Link>
@@ -165,4 +169,5 @@ export default function Merchants() {
 
     </div>
   );
+
 }
