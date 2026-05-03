@@ -10,20 +10,15 @@ export default function AuthProvider({ children }) {
   );
 
   const login = async (phone, password) => {
-    try {
-      const res = await api.post("/auth/login", {
-        phone,
-        password,
-      });
+    const res = await api.post("/auth/login", {
+      phone,
+      password,
+    });
 
-      const jwt = res.data.token;
+    const jwt = res.data.token;
 
-      localStorage.setItem("adminToken", jwt);
-      setToken(jwt);
-    } catch (err) {
-      console.error("Login failed:", err);
-      alert("Invalid credentials");
-    }
+    localStorage.setItem("adminToken", jwt);
+    setToken(jwt);
   };
 
   const logout = () => {
