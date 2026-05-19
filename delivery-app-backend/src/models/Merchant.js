@@ -12,7 +12,12 @@ const merchantSchema = new mongoose.Schema(
 
     type: {
       type: String,
-      enum: ["restaurant", "market", "pharmacy", "store"],
+      enum: ["restaurant", "market", "pharmacy", "store", "clothing"],
+    },
+
+    subCategory: {
+      type: String,
+      trim: true,
     },
 
     image: String,

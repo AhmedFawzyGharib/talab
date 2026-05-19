@@ -9,28 +9,41 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
+  ScrollView,
 } from "react-native";
 import api from "../api/api";
 import { AuthContext } from "../context/AuthContext";
+import { SUB_CATEGORIES } from "../constants/categories";
 
-export default function MerchantsScreen({ navigation }) {
+export default function MerchantsScreen({ navigation, route }) {
+  const categoryTitle = route?.params?.title;
+  const categoryTypes = route?.params?.types;
+
+  const subCategories = useMemo(() => {
+    if (!categoryTypes) return [];
+    const firstType = categoryTypes.split(",")[0].trim();
+    return SUB_CATEGORIES[firstType] || [];
+  }, [categoryTypes]);
+
   const [merchants, setMerchants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState("");
+  const [activeSub, setActiveSub] = useState(null);
   const { logout } = useContext(AuthContext);
 
   useEffect(() => {
     loadMerchants();
 
     navigation.setOptions({
+      title: categoryTitle || "Shops & Restaurants",
       headerRight: () => (
         <TouchableOpacity onPress={handleLogout} style={{ marginRight: 6 }}>
           <Text style={{ color: "#ef4444", fontWeight: "700" }}>Logout</Text>
         </TouchableOpacity>
       ),
     });
-  }, []);
+  }, [activeSub]);
 
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
@@ -41,7 +54,12 @@ export default function MerchantsScreen({ navigation }) {
 
   const loadMerchants = async () => {
     try {
-      const res = await api.get("/merchants");
+      const params = new URLSearchParams();
+      if (categoryTypes) params.append("type", categoryTypes);
+      if (activeSub) params.append("subCategory", activeSub);
+      const query = params.toString();
+      const url = query ? `/merchants?${query}` : "/merchants";
+      const res = await api.get(url);
       setMerchants(res.data || []);
     } catch (error) {
       console.log("MERCHANT ERROR:", error.message);
@@ -124,6 +142,49 @@ export default function MerchantsScreen({ navigation }) {
         />
       </View>
 
+      {subCategories.length > 0 && (
+        <View style={styles.chipsRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipsContent}
+          >
+            <TouchableOpacity
+              style={[styles.chip, activeSub === null && styles.chipActive]}
+              onPress={() => setActiveSub(null)}
+            >
+              <Text
+                style={[
+                  styles.chipText,
+                  activeSub === null && styles.chipTextActive,
+                ]}
+              >
+                All
+              </Text>
+            </TouchableOpacity>
+            {subCategories.map((sc) => (
+              <TouchableOpacity
+                key={sc.key}
+                style={[
+                  styles.chip,
+                  activeSub === sc.key && styles.chipActive,
+                ]}
+                onPress={() => setActiveSub(sc.key)}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    activeSub === sc.key && styles.chipTextActive,
+                  ]}
+                >
+                  {sc.icon} {sc.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
       <FlatList
         data={filtered}
         keyExtractor={(item) => item._id}
@@ -171,6 +232,23 @@ const styles = StyleSheet.create({
   },
   searchIcon: { fontSize: 16, marginRight: 8 },
   searchInput: { flex: 1, color: "#1f2937", fontSize: 14 },
+  chipsRow: { marginBottom: 4 },
+  chipsContent: { paddingHorizontal: 15, paddingVertical: 6 },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#fff",
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  chipActive: {
+    backgroundColor: "#4f46e5",
+    borderColor: "#4f46e5",
+  },
+  chipText: { fontSize: 13, color: "#4b5563", fontWeight: "600" },
+  chipTextActive: { color: "#fff" },
   card: {
     flexDirection: "row",
     alignItems: "center",

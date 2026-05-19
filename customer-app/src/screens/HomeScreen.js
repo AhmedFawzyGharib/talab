@@ -11,14 +11,42 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AuthContext } from "../context/AuthContext";
 
-const FEATURES = [
+const CATEGORIES = [
   {
-    key: "Merchants",
-    icon: "🏪",
-    title: "Browse Shops",
-    subtitle: "Restaurants, markets & more",
+    key: "market",
+    icon: "🛒",
+    title: "Markets",
+    subtitle: "Supermarkets & grocery stores",
     color: "#4f46e5",
+    types: "market",
   },
+  {
+    key: "food",
+    icon: "🍔",
+    title: "Restaurants & Cafés",
+    subtitle: "Food, drinks & desserts",
+    color: "#f59e0b",
+    types: "restaurant",
+  },
+  {
+    key: "pharmacy",
+    icon: "💊",
+    title: "Pharmacies",
+    subtitle: "Medicine & health products",
+    color: "#10b981",
+    types: "pharmacy",
+  },
+  {
+    key: "clothing",
+    icon: "👕",
+    title: "Clothing",
+    subtitle: "Fashion & apparel",
+    color: "#ec4899",
+    types: "clothing",
+  },
+];
+
+const ACTIONS = [
   {
     key: "CustomDelivery",
     icon: "📦",
@@ -72,25 +100,53 @@ export default function HomeScreen({ navigation }) {
           </Text>
         </View>
 
-        <Text style={styles.sectionTitle}>Services</Text>
+        <Text style={styles.sectionTitle}>Browse by Category</Text>
 
-        {FEATURES.map((f) => (
+        {CATEGORIES.map((c) => (
           <TouchableOpacity
-            key={f.key}
+            key={c.key}
             style={styles.featureCard}
-            onPress={() => navigation.navigate(f.key)}
+            onPress={() =>
+              navigation.navigate("Merchants", {
+                category: c.key,
+                title: c.title,
+                types: c.types,
+              })
+            }
             activeOpacity={0.8}
           >
             <View
-              style={[styles.iconWrap, { backgroundColor: `${f.color}15` }]}
+              style={[styles.iconWrap, { backgroundColor: `${c.color}15` }]}
             >
-              <Text style={styles.iconText}>{f.icon}</Text>
+              <Text style={styles.iconText}>{c.icon}</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.featureTitle}>{f.title}</Text>
-              <Text style={styles.featureSubtitle}>{f.subtitle}</Text>
+              <Text style={styles.featureTitle}>{c.title}</Text>
+              <Text style={styles.featureSubtitle}>{c.subtitle}</Text>
             </View>
-            <Text style={[styles.arrow, { color: f.color }]}>›</Text>
+            <Text style={[styles.arrow, { color: c.color }]}>›</Text>
+          </TouchableOpacity>
+        ))}
+
+        <Text style={[styles.sectionTitle, { marginTop: 20 }]}>More</Text>
+
+        {ACTIONS.map((a) => (
+          <TouchableOpacity
+            key={a.key}
+            style={styles.featureCard}
+            onPress={() => navigation.navigate(a.key)}
+            activeOpacity={0.8}
+          >
+            <View
+              style={[styles.iconWrap, { backgroundColor: `${a.color}15` }]}
+            >
+              <Text style={styles.iconText}>{a.icon}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.featureTitle}>{a.title}</Text>
+              <Text style={styles.featureSubtitle}>{a.subtitle}</Text>
+            </View>
+            <Text style={[styles.arrow, { color: a.color }]}>›</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
