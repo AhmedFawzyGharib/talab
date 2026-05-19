@@ -9,6 +9,7 @@ import DriverApplyScreen from "./screens/DriverApplyScreen";
 import PendingScreen from "./screens/PendingScreen";
 import SetPasswordScreen from "./screens/SetPasswordScreen";
 import VerifyOtpScreen from "./screens/VerifyOtpScreen";
+import ProfileScreen from "./screens/ProfileScreen";
 
 import { AuthContext } from "./context/AuthContext";
 
@@ -46,6 +47,7 @@ function AppStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Home" component={HomeScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
     </Stack.Navigator>
   );
 }

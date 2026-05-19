@@ -12,6 +12,10 @@ const UserSchema = new mongoose.Schema(
       type: String
     },
 
+    avatar: {
+      type: String,
+    },
+
     phone: {
       type: String,
       unique: true,

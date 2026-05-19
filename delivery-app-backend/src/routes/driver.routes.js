@@ -6,10 +6,27 @@ const auth = require("../middlewares/auth.middleware");
 const role = require("../middlewares/role.middleware");
 
 /* ===============================
+   Driver Profile (self)
+================================= */
+
+router.get(
+  "/me",
+  auth,
+  role("driver"),
+  driverController.getDriverProfile
+);
+
+router.patch(
+  "/me",
+  auth,
+  role("driver"),
+  driverController.updateDriverProfile
+);
+
+/* ===============================
    Driver Self Actions
 ================================= */
 
-// Toggle Online / Offline
 router.put(
   "/online",
   auth,
@@ -17,7 +34,6 @@ router.put(
   driverController.toggleOnline
 );
 
-// Update Location
 router.put(
   "/location",
   auth,

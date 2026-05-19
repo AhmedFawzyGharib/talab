@@ -1,4 +1,6 @@
 const bcrypt = require("bcryptjs");
+const fs = require("fs");
+const path = require("path");
 const User = require("../models/User");
 
 const PHONE_REGEX = /^01[0125]\d{8}$/;
@@ -10,6 +12,7 @@ const sanitizeUser = (user) => ({
   email: user.email || null,
   phone: user.phone,
   role: user.role,
+  avatar: user.avatar || null,
   createdAt: user.createdAt,
 });
 
@@ -139,6 +142,40 @@ exports.changePassword = async (req, res) => {
     res.json({ message: "Password changed successfully" });
   } catch (err) {
     console.error("CHANGE PASSWORD ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+/* ===============================
+   UPLOAD AVATAR
+================================= */
+exports.uploadAvatar = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Best-effort cleanup of previous avatar
+    if (user.avatar) {
+      const oldPath = path.join("uploads", user.avatar);
+      fs.unlink(oldPath, () => {});
+    }
+
+    user.avatar = req.file.filename;
+    await user.save();
+
+    res.json({
+      message: "Avatar updated",
+      avatar: user.avatar,
+      user: sanitizeUser(user),
+    });
+  } catch (err) {
+    console.error("UPLOAD AVATAR ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 };

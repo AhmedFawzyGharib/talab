@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Platform,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MapView, { Marker, Polyline } from "react-native-maps";
@@ -33,10 +34,12 @@ function getGreeting() {
   return "Good evening";
 }
 
-export default function HomeScreen() {
+export default function HomeScreen({ navigation }) {
   const { logout, user } = useContext(AuthContext);
   const driverName = user?.name || "Driver";
   const firstName = driverName.split(" ")[0];
+  const API_HOST = "http://10.0.0.99:5000";
+  const avatarUrl = user?.avatar ? `${API_HOST}/uploads/${user.avatar}` : null;
 
   const [orders, setOrders] = useState([]);
   const [activeOrder, setActiveOrder] = useState(null);
@@ -411,16 +414,34 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.welcomeBar}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {firstName.charAt(0).toUpperCase()}
-          </Text>
-        </View>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("Profile")}
+          activeOpacity={0.7}
+        >
+          {avatarUrl ? (
+            <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
+          ) : (
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {firstName.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 12 }}>
           <Text style={styles.greeting}>{getGreeting()} 👋</Text>
           <Text style={styles.welcomeName}>{firstName}</Text>
         </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutIconBtnLight}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("Profile")}
+          style={styles.logoutIconBtnLight}
+        >
+          <Text style={{ fontSize: 18, color: "#fff" }}>👤</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleLogout}
+          style={[styles.logoutIconBtnLight, { marginLeft: 8 }]}
+        >
           <Text style={{ fontSize: 18, color: "#fff" }}>⎋</Text>
         </TouchableOpacity>
       </View>
@@ -553,6 +574,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
+  },
+  avatarImg: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#fff",
   },
   avatarText: { color: "#4f46e5", fontSize: 22, fontWeight: "bold" },
   greeting: { color: "#e0e7ff", fontSize: 13, fontWeight: "500" },

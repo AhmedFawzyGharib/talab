@@ -8,8 +8,12 @@ const driverSchema = new mongoose.Schema({
   },
   vehicleType: {
     type: String,
-    enum: ["bike", "car"],
+    enum: ["bike", "car", "motorcycle"],
     required: true
+  },
+  vehicleNumber: {
+    type: String,
+    trim: true,
   },
   isOnline: { type: Boolean, default: false },
   currentLocation: {
