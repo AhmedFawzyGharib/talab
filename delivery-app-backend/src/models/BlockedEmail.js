@@ -1,9 +1,15 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
 const blockedEmailSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
-  reason: String,
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true,
+    trim: true,
+  },
+  reason: { type: String, trim: true },
   blockedAt: { type: Date, default: Date.now },
 });
 
-export default mongoose.model("BlockedEmail", blockedEmailSchema);
+module.exports = mongoose.model("BlockedEmail", blockedEmailSchema);

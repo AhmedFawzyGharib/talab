@@ -180,4 +180,47 @@ router.patch(
   adminController.updateWithdrawStatus
 );
 
+/* ===============================
+   BLOCKED EMAILS
+================================= */
+
+router.get(
+  "/blocked-emails",
+  auth,
+  role("admin", "super_admin"),
+  adminController.getBlockedEmails
+);
+
+router.post(
+  "/blocked-emails",
+  auth,
+  role("admin", "super_admin"),
+  adminController.blockEmail
+);
+
+router.delete(
+  "/blocked-emails/:id",
+  auth,
+  role("admin", "super_admin"),
+  adminController.unblockEmail
+);
+
+/* ===============================
+   USERS (super_admin only)
+================================= */
+
+router.get(
+  "/users",
+  auth,
+  role("super_admin"),
+  adminController.getUsers
+);
+
+router.post(
+  "/users",
+  auth,
+  role("super_admin"),
+  adminController.createUserByAdmin
+);
+
 module.exports = router;
