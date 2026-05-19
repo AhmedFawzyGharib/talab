@@ -28,6 +28,18 @@ export const CartProvider = ({ children }) => {
     );
   };
 
+  const updateQuantity = (productId, delta) => {
+    setCartItems((prev) =>
+      prev
+        .map((item) =>
+          item._id === productId
+            ? { ...item, quantity: item.quantity + delta }
+            : item
+        )
+        .filter((item) => item.quantity > 0)
+    );
+  };
+
   const clearCart = () => {
     setCartItems([]);
     setDeliveryLocation(null);
@@ -39,6 +51,7 @@ export const CartProvider = ({ children }) => {
         cartItems,
         addToCart,
         removeFromCart,
+        updateQuantity,
         clearCart,
         deliveryLocation,
         setDeliveryLocation,

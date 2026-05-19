@@ -25,6 +25,7 @@ import SelectLocationScreen from "./screens/SelectLocationScreen";
 import OrderSummaryScreen from "./screens/OrderSummaryScreen";
 import TrackingScreen from "./screens/TrackingScreen";
 import MyOrdersScreen from "./screens/MyOrdersScreen";
+import ProfileScreen from "./screens/ProfileScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -69,7 +70,7 @@ function AppStack() {
       <Stack.Screen
         name="Home"
         component={HomeScreen}
-        options={{ title: "Home" }}
+        options={{ headerShown: false }}
       />
 
       <Stack.Screen
@@ -123,6 +124,12 @@ function AppStack() {
         name="MyOrders"
         component={MyOrdersScreen}
         options={{ title: "My Orders" }}
+      />
+
+      <Stack.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ title: "My Profile" }}
       />
 
     </Stack.Navigator>

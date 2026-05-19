@@ -14,7 +14,7 @@ const login = async (req, res) => {
   try {
     const { phone, password } = req.body;
 
-    if (!phone || !password) {
+    if (typeof phone !== "string" || typeof password !== "string" || !phone || !password) {
       return res.status(400).json({
         message: "Phone and password are required",
       });
@@ -68,7 +68,7 @@ const requestDriverOtp = async (req, res) => {
   try {
     const { phone } = req.body;
 
-    if (!phone) {
+    if (typeof phone !== "string" || !phone) {
       return res.status(400).json({
         message: "Phone is required",
       });
@@ -122,7 +122,12 @@ const verifyOtpAndSetPassword = async (req, res) => {
   try {
     const { phone, otp, password } = req.body;
 
-    if (!phone || !otp || !password) {
+    if (
+      typeof phone !== "string" ||
+      typeof otp !== "string" ||
+      typeof password !== "string" ||
+      !phone || !otp || !password
+    ) {
       return res.status(400).json({
         message: "All fields are required",
       });
@@ -215,7 +220,7 @@ const checkApplicationStatus = async (req, res) => {
   try {
     const { phone } = req.body;
 
-    if (!phone) {
+    if (typeof phone !== "string" || !phone) {
       return res.status(400).json({
         message: "Phone is required",
       });
@@ -246,7 +251,12 @@ const createAdmin = async (req, res) => {
   try {
     const { name, phone, password } = req.body;
 
-    if (!name || !phone || !password) {
+    if (
+      typeof name !== "string" ||
+      typeof phone !== "string" ||
+      typeof password !== "string" ||
+      !name || !phone || !password
+    ) {
       return res.status(400).json({
         message: "All fields are required",
       });
@@ -289,7 +299,12 @@ const createCustomer = async (req, res) => {
   try {
     const { name, phone, password } = req.body;
 
-    if (!name || !phone || !password) {
+    if (
+      typeof name !== "string" ||
+      typeof phone !== "string" ||
+      typeof password !== "string" ||
+      !name || !phone || !password
+    ) {
       return res.status(400).json({
         message: "All fields are required",
       });
@@ -332,7 +347,12 @@ const registerCustomer = async (req, res) => {
   try {
     const { name, phone, password } = req.body;
 
-    if (!name || !phone || !password) {
+    if (
+      typeof name !== "string" ||
+      typeof phone !== "string" ||
+      typeof password !== "string" ||
+      !name || !phone || !password
+    ) {
       return res.status(400).json({
         message: "All fields are required",
       });
@@ -373,6 +393,16 @@ const registerCustomer = async (req, res) => {
 const verifyCustomerOtp = async (req, res) => {
   try {
     const { name, phone, password, otp } = req.body;
+
+    if (
+      typeof name !== "string" ||
+      typeof phone !== "string" ||
+      typeof password !== "string" ||
+      typeof otp !== "string" ||
+      !name || !phone || !password || !otp
+    ) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
 
     const existingOtp = await Otp.findOne({ phone, code: otp });
 
